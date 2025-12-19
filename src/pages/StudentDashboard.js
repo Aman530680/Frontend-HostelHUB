@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { getAuth } from '../utils/auth'
+import { api } from '../api'
 import './StudentDashboard.css'
 import '../styles/status.css'
 
@@ -23,8 +24,7 @@ export default function StudentDashboard() {
     if (!user) return
     setLoading(true)
     try {
-      const res = await fetch(`http://localhost:5000/complaints/student/${user.id}`)
-      const data = await res.json()
+      const data = await api(`/api/complaints/student/${user.id}`)
       setComplaints(Array.isArray(data) ? data : [])
     } catch {
       setComplaints([])
@@ -50,25 +50,22 @@ export default function StudentDashboard() {
   async function createComplaint(e) {
     e.preventDefault()
     setError('')
+
     if (!form.description.trim()) {
       return setError('Description is required')
     }
 
-    const body = {
-      student_id: user.id,
-      description: form.description,
-      category: form.category,
-      image: form.image
-    }
-
     try {
-      const res = await fetch('http://localhost:5000/complaints', {
+      const data = await api('/api/complaints', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          student_id: user.id,
+          description: form.description,
+          category: form.category,
+          image: form.image
+        })
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error()
+
       setComplaints(prev => [data, ...prev])
       setForm({ description: '', category: 'plumbing', image: '' })
     } catch {
@@ -88,21 +85,19 @@ export default function StudentDashboard() {
 
   async function updateComplaint(e) {
     e.preventDefault()
-    const body = {
-      description: form.description,
-      category: form.category,
-      image: form.image
-    }
-
     try {
-      const res = await fetch(`http://localhost:5000/complaints/${editing.id}`, {
+      const data = await api(`/api/complaints/${editing.id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        body: JSON.stringify({
+          description: form.description,
+          category: form.category,
+          image: form.image
+        })
       })
-      const data = await res.json()
-      if (!res.ok) throw new Error()
-      setComplaints(prev => prev.map(x => x.id === data.id ? data : x))
+
+      setComplaints(prev =>
+        prev.map(x => (x.id === data.id ? data : x))
+      )
       setEditing(null)
       setForm({ description: '', category: 'plumbing', image: '' })
     } catch {
@@ -113,8 +108,7 @@ export default function StudentDashboard() {
   async function deleteComplaint(id) {
     if (!window.confirm('Delete this complaint?')) return
     try {
-      const res = await fetch(`http://localhost:5000/complaints/${id}`, { method: 'DELETE' })
-      if (!res.ok) throw new Error()
+      await api(`/api/complaints/${id}`, { method: 'DELETE' })
       setComplaints(prev => prev.filter(c => c.id !== id))
     } catch {
       setError('Failed to delete complaint')
@@ -130,79 +124,81 @@ export default function StudentDashboard() {
     <div className="student-dashboard">
       <div className="dashboard-grid">
         <div className="card">
-          <div className="panel-header">
-            <h3>{editing ? 'Edit Complaint' : 'Create New Complaint'}</h3>
-          </div>
-          
-          <form onSubmit={editing ? updateComplaint : createComplaint} className="form-container">
-            <div className="form-group">
-              <label>Category</label>
-              <select name="category" value={form.category} onChange={onChange} className="input">
-                <option value="plumbing">Plumbing</option>
-                <option value="electricity">Electricity</option>
-                <option value="carpentry">Carpentry</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
+          <h3>{editing ? 'Edit Complaint' : 'Create New Complaint'}</h3>
 
-            <div className="form-group">
-              <label>Description</label>
-              <textarea name="description" value={form.description} onChange={onChange} className="input" rows="4" required />
-            </div>
+          <form onSubmit={editing ? updateComplaint : createComplaint}>
+            <label>Category</label>
+            <select
+              name="category"
+              value={form.category}
+              onChange={onChange}
+              className="input"
+            >
+              <option value="plumbing">Plumbing</option>
+              <option value="electricity">Electricity</option>
+              <option value="carpentry">Carpentry</option>
+              <option value="other">Other</option>
+            </select>
 
-            <div className="form-group">
-              <label>Upload Image (Optional)</label>
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="input" />
-            </div>
+            <label>Description</label>
+            <textarea
+              name="description"
+              value={form.description}
+              onChange={onChange}
+              className="input"
+              required
+            />
+
+            <label>Upload Image (Optional)</label>
+            <input type="file" accept="image/*" onChange={handleImageUpload} />
 
             {form.image && (
-              <div className="form-group">
-                <img src={form.image} alt="Preview" style={{ width: 200, borderRadius: 8 }} />
-              </div>
+              <img src={form.image} alt="preview" width="200" />
             )}
 
-            <div className="btn-group">
-              <button className="btn" type="submit">{editing ? 'Update' : 'Submit'}</button>
-              {editing && <button type="button" className="btn danger" onClick={cancelEdit}>Cancel</button>}
-            </div>
+            <button className="btn" type="submit">
+              {editing ? 'Update' : 'Submit'}
+            </button>
+
+            {editing && (
+              <button type="button" className="btn danger" onClick={cancelEdit}>
+                Cancel
+              </button>
+            )}
+
             {error && <div className="error">{error}</div>}
           </form>
         </div>
 
         <div className="card">
-          <div className="panel-header">
-            <h3>My Complaints</h3>
-            <button className="btn" onClick={loadComplaints}>
-              {loading ? 'Loading...' : 'Refresh'}
-            </button>
-          </div>
+          <h3>My Complaints</h3>
+          <button className="btn" onClick={loadComplaints}>
+            {loading ? 'Loading...' : 'Refresh'}
+          </button>
 
-          <div className="complaints-panel">
-            {complaints.map(c => (
-              <div key={c.id} className="complaint-item">
-                <div className="complaint-header">
-                  <h4 className="complaint-title">{c.category} Issue</h4>
-                  <span className={`status-badge status-${c.status}`}>{c.status}</span>
-                </div>
-                <p><strong>Category:</strong> {c.category}</p>
-                <p><strong>Description:</strong> {c.description}</p>
-                {c.image && <img src={c.image} alt="" className="complaint-image" />}
-                {c.assigned_worker_name && <p><strong>Assigned to:</strong> {c.assigned_worker_name}</p>}
-                {c.warden_comments && <p><strong>Warden Comments:</strong> {c.warden_comments}</p>}
-                <div className="btn-group">
-                  {c.status === 'pending' && (
-                    <>
-                      <button className="btn" onClick={() => startEdit(c)}>Edit</button>
-                      <button className="btn danger" onClick={() => deleteComplaint(c.id)}>Delete</button>
-                    </>
-                  )}
-                </div>
-              </div>
-            ))}
-            {complaints.length === 0 && !loading && (
-              <div className="empty-state">No complaints yet. Create your first complaint above.</div>
-            )}
-          </div>
+          {complaints.map(c => (
+            <div key={c.id} className="complaint-item">
+              <h4>{c.category}</h4>
+              <p>{c.description}</p>
+              <span className={`status-badge status-${c.status}`}>
+                {c.status}
+              </span>
+
+              {c.status === 'pending' && (
+                <>
+                  <button className="btn" onClick={() => startEdit(c)}>
+                    Edit
+                  </button>
+                  <button
+                    className="btn danger"
+                    onClick={() => deleteComplaint(c.id)}
+                  >
+                    Delete
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
         </div>
       </div>
     </div>
