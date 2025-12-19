@@ -8,6 +8,7 @@ import StudentDashboard from './pages/StudentDashboard'
 import WardenDashboard from './pages/WardenDashboard'
 import WorkerDashboard from './pages/WorkerDashboard'
 import PrivateRoute from './components/PrivateRoute'
+
 function App() {
   return (
     <BrowserRouter>
@@ -17,12 +18,37 @@ function App() {
           <Route path="/" element={<MainDashboard />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/student" element={<PrivateRoute role="student"><StudentDashboard /></PrivateRoute>} />
-          <Route path="/warden" element={<PrivateRoute role="warden"><WardenDashboard /></PrivateRoute>} />
-          <Route path="/worker" element={<PrivateRoute role="worker"><WorkerDashboard /></PrivateRoute>} />
+
+          <Route
+            path="/student"
+            element={
+              <PrivateRoute role="student">
+                <StudentDashboard />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/warden"
+            element={
+              <PrivateRoute role="warden">
+                <WardenDashboard />
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/worker"
+            element={
+              <PrivateRoute role="worker">
+                <WorkerDashboard />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </div>
     </BrowserRouter>
   )
 }
+
 export default App
