@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { getAuth } from '../utils/auth'
+import { api } from '../api'
 import './WorkerDashboard.css'
 import '../styles/status.css'
 
@@ -16,8 +17,7 @@ export default function WorkerDashboard() {
     if (!user) return
     setLoading(true)
     try {
-      const res = await fetch('http://localhost:5000/complaints/all')
-      const data = await res.json()
+      const data = await api('/api/complaints/all')
       setComplaints(Array.isArray(data) ? data : [])
     } catch {
       setComplaints([])
@@ -27,26 +27,39 @@ export default function WorkerDashboard() {
 
   async function updateStatus(id, status) {
     const body = { status }
-    if (status === 'in-progress' && !complaints.find(c => c.id === id).assigned_worker_id) {
+
+    if (
+      status === 'in-progress' &&
+      !complaints.find(c => c.id === id)?.assigned_worker_id
+    ) {
       body.assigned_worker_id = user.id
     }
-    
+
     try {
-      const res = await fetch(`http://localhost:5000/complaints/${id}/status`, {
+      const data = await api(`/api/complaints/${id}/status`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
-      const data = await res.json()
-      if (res.ok) {
-        setComplaints(prev => prev.map(c => c.id === data.id ? data : c))
-      }
-    } catch {}
+
+      setComplaints(prev =>
+        prev.map(c => (c.id === data.id ? data : c))
+      )
+    } catch {
+      // optional: error handling UI
+    }
   }
 
-  const availableComplaints = complaints.filter(c => c.status === 'accepted' && !c.assigned_worker_id)
-  const myInProgressComplaints = complaints.filter(c => c.status === 'in-progress' && c.assigned_worker_id === user?.id)
-  const myCompletedComplaints = complaints.filter(c => c.status === 'completed' && c.assigned_worker_id === user?.id)
+  const availableComplaints = complaints.filter(
+    c => c.status === 'accepted' && !c.assigned_worker_id
+  )
+
+  const myInProgressComplaints = complaints.filter(
+    c => c.status === 'in-progress' && c.assigned_worker_id === user?.id
+  )
+
+  const myCompletedComplaints = complaints.filter(
+    c => c.status === 'completed' && c.assigned_worker_id === user?.id
+  )
 
   return (
     <div className="worker-wrap">
@@ -62,68 +75,74 @@ export default function WorkerDashboard() {
         {/* AVAILABLE WORK */}
         <div className="complaints-section card">
           <h3>Available Work ({availableComplaints.length})</h3>
-        {availableComplaints.map(c => (
-          <div key={c.id} className="complaint-card">
-            <div className="complaint-info">
-              <h4>{c.category} Issue</h4>
-              <p><strong>Student:</strong> {c.student_name}</p>
-              <p><strong>Room:</strong> {c.room_number}</p>
-              <p><strong>Category:</strong> {c.category}</p>
-              <p><strong>Description:</strong> {c.description}</p>
-              {c.image && <img src={c.image} alt="" className="complaint-image" />}
-              {c.warden_comments && <p><strong>Warden Notes:</strong> {c.warden_comments}</p>}
-            </div>
-            <div className="complaint-actions">
-              <button className="btn" onClick={() => updateStatus(c.id, 'in-progress')}>
+
+          {availableComplaints.map(c => (
+            <div key={c.id} className="complaint-card">
+              <div className="complaint-info">
+                <h4>{c.category} Issue</h4>
+                <p><strong>Student:</strong> {c.student_name}</p>
+                <p><strong>Room:</strong> {c.room_number}</p>
+                <p><strong>Description:</strong> {c.description}</p>
+                {c.image && (
+                  <img src={c.image} alt="" className="complaint-image" />
+                )}
+                {c.warden_comments && (
+                  <p><strong>Warden Notes:</strong> {c.warden_comments}</p>
+                )}
+              </div>
+
+              <button
+                className="btn"
+                onClick={() => updateStatus(c.id, 'in-progress')}
+              >
                 Take This Job
               </button>
             </div>
-          </div>
-        ))}
+          ))}
+
           {availableComplaints.length === 0 && <p>No available work</p>}
         </div>
 
-        {/* MY IN PROGRESS WORK */}
+        {/* IN PROGRESS */}
         <div className="complaints-section card">
           <h3>My Work In Progress ({myInProgressComplaints.length})</h3>
-        {myInProgressComplaints.map(c => (
-          <div key={c.id} className="complaint-card">
-            <div className="complaint-info">
+
+          {myInProgressComplaints.map(c => (
+            <div key={c.id} className="complaint-card">
               <h4>{c.category} Issue</h4>
               <p><strong>Student:</strong> {c.student_name}</p>
               <p><strong>Room:</strong> {c.room_number}</p>
-              <p><strong>Category:</strong> {c.category}</p>
-              <p><strong>Description:</strong> {c.description}</p>
-              {c.image && <img src={c.image} alt="" className="complaint-image" />}
-              {c.warden_comments && <p><strong>Warden Notes:</strong> {c.warden_comments}</p>}
-            </div>
-            <div className="complaint-actions">
-              <button className="btn success" onClick={() => updateStatus(c.id, 'completed')}>
+              <p>{c.description}</p>
+
+              <button
+                className="btn success"
+                onClick={() => updateStatus(c.id, 'completed')}
+              >
                 Mark Complete
               </button>
             </div>
-          </div>
-        ))}
+          ))}
+
           {myInProgressComplaints.length === 0 && <p>No work in progress</p>}
         </div>
       </div>
 
-      {/* MY COMPLETED WORK */}
+      {/* COMPLETED */}
       <div className="complaints-section card">
         <h3>My Completed Work ({myCompletedComplaints.length})</h3>
+
         {myCompletedComplaints.map(c => (
           <div key={c.id} className="complaint-card">
-            <div className="complaint-info">
-              <h4>{c.category} Issue</h4>
-              <p><strong>Student:</strong> {c.student_name}</p>
-              <p><strong>Room:</strong> {c.room_number}</p>
-              <p><strong>Category:</strong> {c.category}</p>
-              <p><strong>Status:</strong> <span className="status-badge status-completed">Completed</span></p>
-              {c.image && <img src={c.image} alt="" className="complaint-image" />}
-            </div>
+            <h4>{c.category} Issue</h4>
+            <p><strong>Student:</strong> {c.student_name}</p>
+            <p><strong>Room:</strong> {c.room_number}</p>
+            <span className="status-badge status-completed">Completed</span>
           </div>
         ))}
-        {myCompletedComplaints.length === 0 && <p>No completed work yet</p>}
+
+        {myCompletedComplaints.length === 0 && (
+          <p>No completed work yet</p>
+        )}
       </div>
     </div>
   )
