@@ -3,10 +3,24 @@ const API_BASE =
 
 export async function api(path, options = {}) {
   const res = await fetch(API_BASE + path, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json'
+    },
     ...options
   })
-  const data = await res.json()
-  if (!res.ok) throw new Error(data.message || 'API error')
+
+  const text = await res.text()
+
+  let data
+  try {
+    data = JSON.parse(text)
+  } catch (err) {
+    throw new Error('Backend returned HTML instead of JSON')
+  }
+
+  if (!res.ok) {
+    throw new Error(data.message || 'API error')
+  }
+
   return data
 }

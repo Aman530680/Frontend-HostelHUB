@@ -19,7 +19,10 @@ export default function Login() {
     try {
       const data = await api('/api/auth/login', {
         method: 'POST',
-        body: JSON.stringify({ role, ...cred })
+        body: JSON.stringify({
+          role,
+          ...cred
+        })
       })
 
       setAuth(data.user)
@@ -36,6 +39,7 @@ export default function Login() {
   return (
     <div className="login-page">
       <h2>Login</h2>
+
       <div className="card">
         <div className="form-row">
           <label>Role</label>
@@ -63,6 +67,7 @@ export default function Login() {
               }
               onChange={onChange}
               className="input"
+              required
             />
           </div>
 
@@ -73,15 +78,18 @@ export default function Login() {
               name="password"
               onChange={onChange}
               className="input"
+              required
             />
           </div>
 
           <div className="form-row">
-            <button className="btn" type="submit">Login</button>
+            <button type="submit" className="btn">
+              Login
+            </button>
           </div>
         </form>
 
-        {msg && <div className="small">{msg}</div>}
+        {msg && <div className="small error">{msg}</div>}
       </div>
     </div>
   )
